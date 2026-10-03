@@ -1,134 +1,356 @@
-import { useState, useEffect, useCallback, useRef } from "react";
-import { X, ChevronLeft, ChevronRight } from "lucide-react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { ArrowRight, ChevronLeft, ChevronRight, ChevronUp, MessageCircle, X } from "lucide-react";
 
-type ImageEntry = {
-  id: number;
-  src: string;
-  alt?: string;
-  category: "bridal" | "simple" | "body" | "minimal" | "special";
-};
+/* ────────────────────────────────────────────────────────────────────────────
+   YOUR PHOTOS  (everything lives in /public/images)
+   • The first 8 are what visitors see on the page.
+   • To change the order, cut a line and paste it somewhere else.
+   • To add a photo: copy the file into public/images and add one line here.
+   ──────────────────────────────────────────────────────────────────────────── */
+type Photo = { file: string; label: string };
 
-const images: ImageEntry[] = [
-  { id: 1,  src: "/images/F4.jpg",     alt: "Bridal henna design on hands", category: "bridal"  },
-  { id: 2,  src: "/images/client1.jpg",                                       category: "bridal"  },
-  { id: 3,  src: "/images/F11.jpg",                                           category: "bridal"  },
-  { id: 4,  src: "/images/S3.jpg",                                            category: "simple"  },
-  { id: 5,  src: "/images/S1.jpg",                                            category: "simple"  },
-  { id: 6,  src: "/images/F1.jpg",                                            category: "bridal"  },
-  { id: 7,  src: "/images/F7.jpg",                                            category: "bridal"  },
-  { id: 8,  src: "/images/S7.jpg",                                            category: "simple"  },
-  { id: 9,  src: "/images/F9.jpg",                                            category: "bridal"  },
-  { id: 10, src: "/images/S4.jpg",                                            category: "simple"  },
-  { id: 11, src: "/images/SS1.jpg",                                           category: "simple"  },
-  { id: 12, src: "/images/C2.jpg",                                            category: "special" },
-  { id: 13, src: "/images/F12.jpg",                                           category: "bridal"  },
-  { id: 14, src: "/images/B1.jpg",                                            category: "body"    },
-  { id: 15, src: "/images/BB.jpg",                                            category: "body"    },
-  { id: 16, src: "/images/j1.jpeg",                                           category: "bridal"  },
-  { id: 17, src: "/images/j2.jpeg",                                           category: "bridal"  },
-  { id: 18, src: "/images/j3.jpeg",                                           category: "bridal"  },
-  { id: 19, src: "/images/j4.jpeg",                                           category: "bridal"  },
-  { id: 20, src: "/images/j5.jpeg",                                           category: "bridal"  },
-  { id: 21, src: "/images/j6.jpeg",                                           category: "bridal"  },
-  { id: 22, src: "/images/j7.jpeg",                                           category: "bridal"  },
-  { id: 23, src: "/images/j8.jpeg",                                           category: "bridal"  },
-  { id: 24, src: "/images/j9.jpeg",                                           category: "bridal"  },
-  { id: 25, src: "/images/j10.jpeg",                                          category: "bridal"  },
-  { id: 26, src: "/images/B3.jpg",                                            category: "body"    },
-  { id: 27, src: "/images/B4.jpg",                                            category: "body"    },
-  { id: 28, src: "/images/F8.jpg",                                            category: "bridal"  },
-  { id: 29, src: "/images/F10.jpg",                                           category: "bridal"  },
-  { id: 30, src: "/images/BB2.jpg",                                           category: "body"    },
-  { id: 31, src: "/images/BB3.jpg",                                           category: "body"    },
-  { id: 32, src: "/images/F6.jpg",                                            category: "bridal"  },
-  { id: 33, src: "/images/F7.jpg",                                            category: "bridal"  },
-  { id: 34, src: "/images/leg.jpg",                                           category: "body"    },
-  { id: 35, src: "/images/leg2.png",                                          category: "body"    },
-  { id: 36, src: "/images/T2.jpg",                                            category: "special" },
-  { id: 37, src: "/images/SM.jpg",                                            category: "minimal" },
-  { id: 38, src: "/images/P1.jpg",                                            category: "minimal" },
-  { id: 39, src: "/images/P2.jpg",                                            category: "minimal" },
-  { id: 40, src: "/images/tiny.jpg",                                          category: "minimal" },
-  { id: 41, src: "/images/M1.jpeg",                                           category: "minimal" },
-  { id: 42, src: "/images/M2.jpeg",                                           category: "minimal" },
-  { id: 43, src: "/images/M3.jpeg",                                           category: "minimal" },
-  { id: 44, src: "/images/M4.jpeg",                                           category: "minimal" },
+const BRIDAL = "Bridal henna design";
+const SIMPLE = "Simple henna design";
+const BODY = "Body henna art";
+const MINIMAL = "Minimal henna design";
+const SPECIAL = "Special occasion henna";
+const LATEST = "Henna design by Fatma";
+
+const PHOTOS: Photo[] = [
+  { file: "F4.jpg", label: BRIDAL },
+  { file: "client1.jpg", label: BRIDAL },
+  { file: "F11.jpg", label: BRIDAL },
+  { file: "S3.jpg", label: SIMPLE },
+  { file: "S1.jpg", label: SIMPLE },
+  { file: "F1.jpg", label: BRIDAL },
+  { file: "F7.jpg", label: BRIDAL },
+  { file: "S7.jpg", label: SIMPLE },
+  { file: "F9.jpg", label: BRIDAL },
+  { file: "S4.jpg", label: SIMPLE },
+  { file: "SS1.jpg", label: SIMPLE },
+  { file: "C2.jpg", label: SPECIAL },
+  { file: "F12.jpg", label: BRIDAL },
+  { file: "BB.jpg", label: BODY },
+  ...Array.from({ length: 10 }, (_, i) => ({ file: `j${i + 1}.jpeg`, label: BRIDAL })),
+  { file: "B3.jpg", label: BODY },
+  { file: "B4.jpg", label: BODY },
+  { file: "F8.jpg", label: BRIDAL },
+  { file: "F10.jpg", label: BRIDAL },
+  { file: "BB2.jpg", label: BODY },
+  { file: "BB3.jpg", label: BODY },
+  { file: "F6.jpg", label: BRIDAL },
+  { file: "leg.jpg", label: BODY },
+  { file: "leg2.png", label: BODY },
+  { file: "T2.jpg", label: SPECIAL },
+  { file: "SM.jpg", label: MINIMAL },
+  { file: "P1.jpg", label: MINIMAL },
+  { file: "P2.jpg", label: MINIMAL },
+  { file: "tiny.jpg", label: MINIMAL },
+  ...Array.from({ length: 4 }, (_, i) => ({ file: `M${i + 1}.jpeg`, label: MINIMAL })),
+  // ── newest photos ──
+  { file: "h1.jfif", label: LATEST },
+  ...Array.from({ length: 13 }, (_, i) => ({ file: `oct-${i + 1}.jpeg`, label: LATEST })),
 ];
 
 const FIRST_COUNT = 8;
+const CARD_GAP = 24; // px, matches `md:gap-6` below
+const WHATSAPP =
+  "https://wa.me/254114532154?text=Hello%20Fatma%2C%20I%27d%20like%20to%20book%20a%20henna%20session";
 
-const getAlt = (img: ImageEntry) =>
-  img.alt ?? `${img.category.charAt(0).toUpperCase() + img.category.slice(1)} henna design`;
+const hideScrollbar = "[scrollbar-width:none] [&::-webkit-scrollbar]:hidden";
 
-// ─── tiny hook: detect touch device ─────────────────────────────────────────
-function useIsTouch() {
-  const [isTouch, setIsTouch] = useState(false);
-  useEffect(() => {
-    setIsTouch(window.matchMedia("(hover: none)").matches);
+const isDesktop = () => window.matchMedia("(min-width: 768px)").matches;
+const scrollBehavior = (): ScrollBehavior =>
+  window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+
+/* ────────────────────────────────────────────────────────────────────────────
+   VIEWER
+   Desktop: horizontal row of cards, Back / Next buttons, arrow keys, trackpad.
+   Mobile : full-screen vertical feed, swipe up / down (one photo per screen).
+   ──────────────────────────────────────────────────────────────────────────── */
+type ViewerProps = {
+  photos: { src: string; alt: string }[];
+  startIndex: number;
+  onClose: () => void;
+  onFail: (src: string) => void;
+};
+
+const Viewer = ({ photos, startIndex, onClose, onFail }: ViewerProps) => {
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const ticking = useRef(false);
+
+  const [progress, setProgress] = useState(0);
+  const [atStart, setAtStart] = useState(true);
+  const [atEnd, setAtEnd] = useState(false);
+  const [showHint, setShowHint] = useState(true);
+
+  const update = useCallback(() => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    const horizontal = isDesktop();
+    const pos = horizontal ? el.scrollLeft : el.scrollTop;
+    const max = horizontal ? el.scrollWidth - el.clientWidth : el.scrollHeight - el.clientHeight;
+    setProgress(max > 0 ? Math.min(1, pos / max) : 1);
+    setAtStart(pos <= 4);
+    setAtEnd(pos >= max - 4);
+    if (pos > 24) setShowHint(false);
   }, []);
-  return isTouch;
-}
 
-const Gallery = () => {
-  const [expanded, setExpanded]             = useState(false);
-  const [selectedIndex, setSelectedIndex]   = useState<number | null>(null);
-  const [imgLoaded, setImgLoaded]           = useState(false);
+  const onScroll = () => {
+    if (ticking.current) return;
+    ticking.current = true;
+    requestAnimationFrame(() => {
+      ticking.current = false;
+      update();
+    });
+  };
 
-  const isTouch = useIsTouch();
+  // Jump straight to the photo that was tapped / the first "unseen" one.
+  useLayoutEffect(() => {
+    const el = scrollerRef.current;
+    const target = el?.children[startIndex] as HTMLElement | undefined;
+    target?.scrollIntoView({ block: isDesktop() ? "nearest" : "start", inline: "start" });
+    update();
+  }, [startIndex, update]);
 
-  // swipe tracking
-  const touchStartX = useRef<number | null>(null);
-
-  const filtered      = images;
-  const visibleImages = expanded ? filtered : filtered.slice(0, FIRST_COUNT);
-  const hasMore       = filtered.length > FIRST_COUNT && !expanded;
-
-  // ── navigation helpers ───────────────────────────────────────────────────
-  const goTo = useCallback((idx: number) => {
-    setImgLoaded(false);
-    setSelectedIndex(idx);
-  }, []);
-
-  const goPrev = useCallback(() => {
-    if (selectedIndex === null) return;
-    goTo((selectedIndex - 1 + filtered.length) % filtered.length);
-  }, [selectedIndex, filtered.length, goTo]);
-
-  const goNext = useCallback(() => {
-    if (selectedIndex === null) return;
-    goTo((selectedIndex + 1) % filtered.length);
-  }, [selectedIndex, filtered.length, goTo]);
-
-  const close = useCallback(() => setSelectedIndex(null), []);
-
-  // ── keyboard navigation ──────────────────────────────────────────────────
+  // Lock the page behind, restore focus afterwards.
   useEffect(() => {
-    if (selectedIndex === null) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "ArrowLeft")  goPrev();
-      if (e.key === "ArrowRight") goNext();
-      if (e.key === "Escape")     close();
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    closeRef.current?.focus();
+    window.addEventListener("resize", update);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("resize", update);
+      previouslyFocused?.focus?.();
     };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [selectedIndex, goPrev, goNext, close]);
+  }, [update]);
 
-  // ── swipe handlers ───────────────────────────────────────────────────────
+  // Move forward / back: a "page" of cards on desktop, one screen on mobile.
+  const step = useCallback((dir: 1 | -1) => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    if (isDesktop()) {
+      const card = el.children[0] as HTMLElement;
+      const style = getComputedStyle(el);
+      const padding = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
+      const unit = card.offsetWidth + CARD_GAP;
+      const perPage = Math.max(1, Math.floor((el.clientWidth - padding + CARD_GAP) / unit));
+      el.scrollBy({ left: dir * perPage * unit, behavior: scrollBehavior() });
+    } else {
+      el.scrollBy({ top: dir * el.clientHeight, behavior: scrollBehavior() });
+    }
+  }, []);
+
+  const backToStart = () =>
+    scrollerRef.current?.scrollTo({ top: 0, left: 0, behavior: scrollBehavior() });
+
+  // Phones: browsers decide on their own whether a short / slow swipe is "enough" to
+  // change the snap point, and often bounce back. So we decide ourselves:
+  // any clear upward / downward swipe moves exactly one photo.
+  const swipe = useRef<{ x: number; y: number; time: number; index: number } | null>(null);
+
   const onTouchStart = (e: React.TouchEvent) => {
-    touchStartX.current = e.touches[0].clientX;
+    const el = scrollerRef.current;
+    if (!el || isDesktop()) return;
+    const t = e.touches[0];
+    swipe.current = {
+      x: t.clientX,
+      y: t.clientY,
+      time: Date.now(),
+      index: Math.round(el.scrollTop / el.clientHeight),
+    };
   };
+
   const onTouchEnd = (e: React.TouchEvent) => {
-    if (touchStartX.current === null) return;
-    const delta = e.changedTouches[0].clientX - touchStartX.current;
-    if (Math.abs(delta) > 50) delta < 0 ? goNext() : goPrev();
-    touchStartX.current = null;
+    const start = swipe.current;
+    swipe.current = null;
+    const el = scrollerRef.current;
+    if (!start || !el || isDesktop()) return;
+
+    const t = e.changedTouches[0];
+    const dy = t.clientY - start.y;
+    const dx = t.clientX - start.x;
+    if (Math.abs(dx) > Math.abs(dy)) return; // sideways, ignore
+
+    const elapsed = Math.max(1, Date.now() - start.time);
+    const quickFlick = Math.abs(dy) > 30 && Math.abs(dy) / elapsed > 0.3;
+    if (Math.abs(dy) < 50 && !quickFlick) return; // too small, let it settle back
+
+    const lastIndex = el.children.length - 1;
+    const target = Math.max(0, Math.min(lastIndex, start.index + (dy < 0 ? 1 : -1)));
+    el.scrollTo({ top: target * el.clientHeight, behavior: scrollBehavior() });
   };
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+      else if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+        e.preventDefault();
+        step(1);
+      } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+        e.preventDefault();
+        step(-1);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose, step]);
+
+  // Built once, so scrolling doesn't re-render every photo.
+  const slides = useMemo(
+    () =>
+      photos.map((photo) => (
+        <figure
+          key={photo.src}
+          className="flex h-full w-full shrink-0 snap-start snap-always items-center justify-center md:aspect-[3/4] md:w-auto md:snap-normal md:overflow-hidden md:rounded-2xl md:bg-[#1e1210] md:ring-1 md:ring-white/10"
+        >
+          <img
+            src={photo.src}
+            alt={photo.alt}
+            loading="lazy"
+            decoding="async"
+            onError={() => onFail(photo.src)}
+            className="h-full w-full object-contain"
+          />
+        </figure>
+      )),
+    [photos, onFail]
+  );
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Henna gallery"
+      className="fixed inset-0 z-50 bg-[#140c0a] text-white"
+    >
+      {/* Progress: how far through the gallery you are */}
+      <div className="absolute inset-x-0 top-0 z-30 h-1 bg-white/10">
+        <div
+          className="h-full bg-[#e8b4a0] transition-[width] duration-150 ease-out"
+          style={{ width: `${progress * 100}%` }}
+        />
+      </div>
+
+      <p className="font-playfair absolute left-8 top-5 z-30 hidden text-xl md:block">
+        Fatma Henna Art
+      </p>
+
+      <button
+        ref={closeRef}
+        type="button"
+        onClick={onClose}
+        aria-label="Close gallery"
+        className="absolute right-4 top-4 z-30 grid h-11 w-11 place-items-center rounded-full bg-black/55 ring-1 ring-white/25 backdrop-blur-md transition hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white md:right-8 md:top-4"
+      >
+        <X className="h-5 w-5" />
+      </button>
+
+      {/* Desktop Back / Next */}
+      <button
+        type="button"
+        onClick={() => step(-1)}
+        aria-label="Previous photos"
+        disabled={atStart}
+        className="absolute left-5 top-1/2 z-30 hidden h-12 w-12 -translate-y-1/2 place-items-center rounded-full bg-white/10 ring-1 ring-white/25 backdrop-blur-md transition hover:bg-white/25 disabled:pointer-events-none disabled:opacity-25 md:grid"
+      >
+        <ChevronLeft className="h-6 w-6" />
+      </button>
+      <button
+        type="button"
+        onClick={() => step(1)}
+        aria-label="Next photos"
+        disabled={atEnd}
+        className="absolute right-5 top-1/2 z-30 hidden h-12 w-12 -translate-y-1/2 place-items-center rounded-full bg-white/10 ring-1 ring-white/25 backdrop-blur-md transition hover:bg-white/25 disabled:pointer-events-none disabled:opacity-25 md:grid"
+      >
+        <ChevronRight className="h-6 w-6" />
+      </button>
+
+      {/* Mobile: tiny hint until the first swipe */}
+      {showHint && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-6 z-30 flex justify-center md:hidden">
+          <span className="font-inter flex items-center gap-1.5 rounded-full bg-black/55 px-4 py-2 text-xs font-medium ring-1 ring-white/20 backdrop-blur-md">
+            <ChevronUp className="h-4 w-4 animate-bounce" />
+            Swipe up for more
+          </span>
+        </div>
+      )}
+
+      {/* The scroller: a vertical feed on phones, a horizontal row from tablet up */}
+      <div
+        ref={scrollerRef}
+        onScroll={onScroll}
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
+        onWheel={(e) => {
+          // Mouse wheel scrolls the row sideways on desktop
+          const el = scrollerRef.current;
+          if (el && isDesktop() && Math.abs(e.deltaY) > Math.abs(e.deltaX)) el.scrollLeft += e.deltaY;
+        }}
+        onClick={(e) => {
+          // Click on the empty dark area (desktop) to close
+          if (e.target === e.currentTarget && isDesktop()) onClose();
+        }}
+        className={`flex h-full w-full snap-y snap-mandatory flex-col overflow-y-auto overscroll-contain md:snap-x md:snap-proximity md:flex-row md:items-center md:gap-6 md:overflow-x-auto md:overflow-y-hidden md:scroll-pl-20 md:px-20 md:pb-16 md:pt-20 ${hideScrollbar}`}
+      >
+        {slides}
+
+        {/* Last stop: a friendly nudge to book */}
+        <div className="flex h-full w-full shrink-0 snap-start flex-col items-center justify-center gap-5 px-8 text-center md:w-[min(30vw,24rem)] md:rounded-2xl md:border md:border-white/15">
+          <p className="font-playfair text-3xl">Like what you see?</p>
+          <p className="font-inter max-w-xs text-sm text-white/70">
+            Message Fatma on WhatsApp to book your henna session.
+          </p>
+          <a
+            href={WHATSAPP}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-inter inline-flex items-center gap-2 rounded-full bg-[#e8b4a0] px-6 py-3 text-sm font-semibold text-[#2a1a17] transition hover:bg-[#f0c2ae]"
+          >
+            <MessageCircle className="h-5 w-5" />
+            Book via WhatsApp
+          </a>
+          <button
+            type="button"
+            onClick={backToStart}
+            className="font-inter text-sm text-white/70 underline underline-offset-4 transition hover:text-white"
+          >
+            Back to the start
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ────────────────────────────────────────────────────────────────────────────
+   GALLERY SECTION
+   ──────────────────────────────────────────────────────────────────────────── */
+const Gallery = () => {
+  const [failed, setFailed] = useState<Set<string>>(new Set());
+  const [viewerIndex, setViewerIndex] = useState<number | null>(null);
+
+  // If a file name is wrong or missing, it simply drops out instead of showing a broken box.
+  const photos = useMemo(
+    () =>
+      PHOTOS.map((p) => ({ src: `/images/${p.file}`, alt: p.label })).filter(
+        (p) => !failed.has(p.src)
+      ),
+    [failed]
+  );
+
+  const markFailed = useCallback(
+    (src: string) => setFailed((prev) => new Set(prev).add(src)),
+    []
+  );
+  const closeViewer = useCallback(() => setViewerIndex(null), []);
 
   return (
     <section id="gallery" className="py-20 bg-card">
       <div className="container mx-auto px-4">
-
-        {/* ── Header ─────────────────────────────────────────────────────── */}
         <div className="text-center mb-10">
           <h2 className="font-playfair text-4xl md:text-5xl font-bold text-foreground mb-3">
             Gallery
@@ -138,192 +360,49 @@ const Gallery = () => {
           </p>
         </div>
 
-        {/* ── Grid ────────────────────────────────────────────────────────── */}
-        {filtered.length === 0 ? (
-          <p className="text-center text-muted-foreground py-16">No images in this category yet.</p>
-        ) : (
-          <>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {visibleImages.map((image, index) => {
-                // Find the TRUE index in the full filtered array
-                const filteredIndex = filtered.indexOf(image);
-                return (
-                  <button
-                    key={image.id}
-                    onClick={() => { setImgLoaded(false); setSelectedIndex(filteredIndex); }}
-                    className="relative aspect-square cursor-pointer overflow-hidden rounded-xl group p-0 border-0 shadow-sm hover:shadow-lg transition-shadow duration-300"
-                    style={{
-                      animationDelay: `${(index % FIRST_COUNT) * 60}ms`,
-                    }}
-                    aria-label={`Open ${getAlt(image)}`}
-                  >
-                    <img
-                      src={image.src}
-                      alt={getAlt(image)}
-                      loading="lazy"
-                      className="w-full h-full object-cover transform group-hover:scale-107 transition-transform duration-500 ease-out"
-                      style={{ transform: "scale(1)", transition: "transform 0.5s ease-out" }}
-                      onMouseEnter={(e) => { (e.currentTarget as HTMLImageElement).style.transform = "scale(1.07)"; }}
-                      onMouseLeave={(e) => { (e.currentTarget as HTMLImageElement).style.transform = "scale(1)"; }}
-                    />
-                    {/* Gradient overlay on hover — desktop */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-3">
-                      <span className="text-white text-xs font-medium tracking-wide capitalize">
-                        {image.category}
-                      </span>
-                    </div>
-
-                    {/* Category badge — always visible, top-right */}
-                    <span className="absolute top-2 right-2 bg-black/40 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full backdrop-blur-sm capitalize opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                      {image.category}
-                    </span>
-                  </button>
-                );
-              })}
-
-              {/* View more tile */}
-              {hasMore && (
-                <button
-                  onClick={() => setExpanded(true)}
-                  className="relative aspect-square rounded-xl overflow-hidden border-2 border-dashed border-border hover:border-primary flex flex-col items-center justify-center gap-2 transition-colors duration-200 bg-muted/30 hover:bg-muted/60"
-                >
-                  <span className="text-3xl font-bold text-foreground">+{filtered.length - FIRST_COUNT}</span>
-                  <span className="text-sm text-muted-foreground font-medium">View all</span>
-                </button>
-              )}
-            </div>
-
-            {/* Collapse button when expanded */}
-            {expanded && filtered.length > FIRST_COUNT && (
-              <div className="text-center mt-6">
-                <button
-                  onClick={() => setExpanded(false)}
-                  className="text-sm text-muted-foreground hover:text-primary border border-border hover:border-primary rounded-full px-5 py-2 transition-colors"
-                >
-                  Show less
-                </button>
-              </div>
-            )}
-          </>
-        )}
-
-        {/* ── Lightbox ────────────────────────────────────────────────────── */}
-        {selectedIndex !== null && (
-          <div
-            className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Image lightbox"
-            onClick={close}
-            onTouchStart={onTouchStart}
-            onTouchEnd={onTouchEnd}
-          >
-            {/* Counter */}
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-black/50 text-white text-xs px-3 py-1 rounded-full backdrop-blur-sm font-medium z-50">
-              {selectedIndex + 1} / {filtered.length}
-            </div>
-
-            {/* Close */}
+        {/* First 8 photos */}
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          {photos.slice(0, FIRST_COUNT).map((photo, index) => (
             <button
-              className="absolute top-4 right-4 z-50 p-2 rounded-full bg-white/10 hover:bg-white/25 text-white transition-colors"
-              onClick={close}
-              aria-label="Close"
+              key={photo.src}
+              type="button"
+              onClick={() => setViewerIndex(index)}
+              aria-label={`Open ${photo.alt}`}
+              className="group relative aspect-square overflow-hidden rounded-xl bg-muted p-0 shadow-sm transition-shadow duration-300 hover:shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             >
-              <X className="h-5 w-5" />
-            </button>
-
-            {/* Keyboard hint — desktop only */}
-            {!isTouch && (
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/40 text-xs flex gap-4 z-50 select-none">
-                <span>← → navigate</span>
-                <span>Esc close</span>
-              </div>
-            )}
-
-            {/* Swipe hint — touch only */}
-            {isTouch && (
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/40 text-xs z-50 select-none">
-                Swipe to navigate
-              </div>
-            )}
-
-            {/* Prev / Next arrows */}
-            <button
-              className="absolute left-3 md:left-6 z-50 p-2 md:p-3 rounded-full bg-white/10 hover:bg-white/25 text-white transition-colors"
-              onClick={(e) => { e.stopPropagation(); goPrev(); }}
-              aria-label="Previous image"
-            >
-              <ChevronLeft className="h-6 w-6" />
-            </button>
-            <button
-              className="absolute right-3 md:right-6 z-50 p-2 md:p-3 rounded-full bg-white/10 hover:bg-white/25 text-white transition-colors"
-              onClick={(e) => { e.stopPropagation(); goNext(); }}
-              aria-label="Next image"
-            >
-              <ChevronRight className="h-6 w-6" />
-            </button>
-
-            {/* Image */}
-            <div
-              className="relative max-w-4xl w-full px-16 flex flex-col items-center"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Loading skeleton */}
-              {!imgLoaded && (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-10 h-10 border-4 border-white/20 border-t-white rounded-full animate-spin" />
-                </div>
-              )}
               <img
-                key={selectedIndex}             /* remount on change to re-trigger fade */
-                src={filtered[selectedIndex].src}
-                alt={getAlt(filtered[selectedIndex])}
-                onLoad={() => setImgLoaded(true)}
-                className="mx-auto max-h-[80vh] w-auto rounded-lg object-contain shadow-2xl"
-                style={{
-                  opacity: imgLoaded ? 1 : 0,
-                  transition: "opacity 0.35s ease",
-                }}
+                src={photo.src}
+                alt={photo.alt}
+                loading="lazy"
+                decoding="async"
+                onError={() => markFailed(photo.src)}
+                className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
               />
+            </button>
+          ))}
+        </div>
 
-              {/* Caption strip */}
-              {imgLoaded && (
-                <div className="mt-4 flex items-center gap-3">
-                  <span className="bg-primary/80 text-white text-xs px-3 py-1 rounded-full capitalize font-medium">
-                    {filtered[selectedIndex].category}
-                  </span>
-                  <p className="text-white/80 text-sm font-medium">
-                    {getAlt(filtered[selectedIndex])}
-                  </p>
-                </div>
-              )}
-
-              {/* Thumbnail strip */}
-              {filtered.length > 1 && imgLoaded && (
-                <div className="mt-4 flex gap-2 overflow-x-auto max-w-full pb-1 px-2 scrollbar-hide">
-                  {filtered.map((img, idx) => (
-                    <button
-                      key={img.id}
-                      onClick={(e) => { e.stopPropagation(); goTo(idx); }}
-                      className={`flex-shrink-0 w-12 h-12 rounded-md overflow-hidden transition-all duration-200 border-2
-                        ${idx === selectedIndex ? "border-white scale-110 shadow-lg" : "border-transparent opacity-50 hover:opacity-80"}`}
-                      aria-label={`Go to image ${idx + 1}`}
-                    >
-                      <img
-                        src={img.src}
-                        alt=""
-                        className="w-full h-full object-cover"
-                        loading="lazy"
-                      />
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+        {photos.length > FIRST_COUNT && (
+          <div className="mt-8 text-center">
+            <button
+              type="button"
+              onClick={() => setViewerIndex(FIRST_COUNT)}
+              className="font-inter inline-flex items-center gap-2 rounded-full border border-primary px-7 py-3 text-sm font-medium text-primary transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            >
+              View more images
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </button>
           </div>
         )}
 
-    
+        {viewerIndex !== null && (
+          <Viewer
+            photos={photos}
+            startIndex={Math.min(viewerIndex, photos.length - 1)}
+            onClose={closeViewer}
+            onFail={markFailed}
+          />
+        )}
       </div>
     </section>
   );
